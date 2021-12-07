@@ -24,16 +24,14 @@ local function websocket_send_text_and_get_echo(uri)
 end
 
 
-constants.REPORTS.STATS_TLS_PORT = nil
 for _, strategy in helpers.each_strategy() do
 
   -- Might need to be marked as flaky because it may require an arbitrary high port?
-  describe("#flaky anonymous reports in Admin API #" .. strategy, function()
+  describe("anonymous reports in Admin API #" .. strategy, function()
     local dns_hostsfile
     local reports_server
 
     local reports_send_ping = function()
-      local constants = package.loaded["kong.constants"]
       ngx.sleep(0.01) -- hand over the CPU so other threads can do work (processing the sent data)
       local admin_client = helpers.admin_client()
 
