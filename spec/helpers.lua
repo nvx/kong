@@ -1275,8 +1275,8 @@ end
 local function mock_reports_server(opts)
   local localhost = "127.0.0.1"
   local threads = require "llthreads2.ex"
-  local server_port = constants.REPORTS.STATS_PORT
   opts = opts or {}
+  local server_port = opts.port or constants.REPORTS.STATS_PORT
 
   local thread = threads.new({
     function(port, host, opts)

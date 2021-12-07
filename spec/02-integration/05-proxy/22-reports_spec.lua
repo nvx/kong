@@ -4,6 +4,7 @@ local websocket_client = require "resty.websocket.client"
 local cjson = require "cjson"
 
 
+constants.REPORTS.STATS_TLS_PORT = nil
 local MESSAGE = "echo, ping, pong. echo, ping, pong. echo, ping, pong.\n"
 
 
@@ -23,16 +24,20 @@ local function websocket_send_text_and_get_echo(uri)
 end
 
 
+constants.REPORTS.STATS_TLS_PORT = nil
 for _, strategy in helpers.each_strategy() do
 
   -- Might need to be marked as flaky because it may require an arbitrary high port?
-  describe("anonymous reports in Admin API #" .. strategy, function()
+  describe("#flaky anonymous reports in Admin API #" .. strategy, function()
     local dns_hostsfile
     local reports_server
 
     local reports_send_ping = function()
+      local constants = package.loaded["kong.constants"]
       ngx.sleep(0.01) -- hand over the CPU so other threads can do work (processing the sent data)
       local admin_client = helpers.admin_client()
+
+      constants.REPORTS.STATS_TLS_PORT = nil
       local res = admin_client:post("/reports/send-ping")
       assert.response(res).has_status(200)
       admin_client:close()
@@ -190,7 +195,7 @@ for _, strategy in helpers.each_strategy() do
     end)
 
     before_each(function()
-      reports_server = helpers.mock_reports_server()
+      reports_server = helpers.mock_reports_server({tls=true, port=constants.REPORTS.STATS_TLS_PORT})
     end)
 
     after_each(function()

@@ -9,6 +9,7 @@ return {
       -- that tests can change the default reports port
       if self.params.port then
         constants.REPORTS.STATS_PORT = self.params.port
+        constants.REPORTS.STATS_TLS_PORT = nil
       end
 
       reports._sync_counter()

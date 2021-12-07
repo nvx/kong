@@ -35,6 +35,7 @@ for _, strategy in helpers.each_strategy() do
 
   -- Marked as flaky because they require an arbitrary high port
   describe("#flaky anonymous reports in Admin API #" .. strategy, function()
+    constants.REPORTS.STATS_TLS_PORT = nil
     local dns_hostsfile
     local yaml_file
     local reports_server

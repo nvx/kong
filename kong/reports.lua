@@ -102,16 +102,30 @@ end
 -- TCP logger
 
 
-local function send_report(signal_type, t, host, port)
+local function send_report(signal_type, t, host, port, _tls)
   if not _enabled then
     return
   elseif type(signal_type) ~= "string" then
     return error("signal_type (arg #1) must be a string", 2)
   end
-
+  local tls
   t = t or {}
   host = host or constants.REPORTS.ADDRESS
   port = port or constants.REPORTS.STATS_PORT
+  tls = false
+  -- keep backwards compatibility and introduce new port attribute for TLS
+  local tls_port = constants.REPORTS.STATS_TLS_PORT
+  -- the presence of a tls_port indicates we have a TLS connection
+  if tls_port then
+    port = tls_port
+    tls = true
+  end
+
+  -- for testing
+  if port and (_tls ~= nil) then
+    port = port
+    tls = _tls
+  end
 
   -- add signal type to data
 
@@ -142,6 +156,15 @@ local function send_report(signal_type, t, host, port)
   local ok = sock:connect(host, port)
   if not ok then
     return
+  end
+  if tls then
+    local opts = {
+      ssl_verify = false,
+    }
+    local res, err = sock:tlshandshake(opts)
+    if not res then
+      return error("Failed to complete TLS handshake. ", err)
+    end
   end
 
   sock:send(concat(_buffer, ";", 1, mutable_idx) .. "\n")
@@ -270,7 +293,7 @@ else -- subsystem == "stream"
 end
 
 
-local function send_ping(host, port)
+local function send_ping(host, port, tls)
   _ping_infos.unique_id = _unique_str
 
   if not _ping_infos.cluster_id then
@@ -306,7 +329,7 @@ local function send_ping(host, port)
   _ping_infos.wss_reqs       = get_counter(WSS_REQUEST_COUNT_KEY)
   _ping_infos.go_plugin_reqs = get_counter(GO_PLUGINS_REQUEST_COUNT_KEY)
 
-  send_report("ping", _ping_infos, host, port)
+  send_report("ping", _ping_infos, host, port, tls)
 
   reset_counter(REQUEST_COUNT_KEY,       _ping_infos.requests)
   reset_counter(HTTP_REQUEST_COUNT_KEY,  _ping_infos.http_reqs)

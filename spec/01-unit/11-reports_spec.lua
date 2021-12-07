@@ -2,11 +2,16 @@ local meta = require "kong.meta"
 local helpers = require "spec.helpers"
 local reports = require "kong.reports"
 local cjson = require "cjson"
+local constants = require "kong.constants"
+
 
 
 describe("reports", function()
   describe("send()", function()
     lazy_setup(function()
+      -- unset this for backwards compatibility
+      -- since 2.7 we introduced an extra port for TLS
+      constants.REPORTS.STATS_TLS_PORT = nil
       reports.toggle(true)
     end)
 
@@ -41,6 +46,37 @@ describe("reports", function()
       assert.not_matches("nilval", res, nil, true)
       assert.matches("foobar=" .. cjson.encode({ foo = "bar" }), res, nil, true)
       assert.matches("bazbat=" .. cjson.encode({ baz = "bat" }), res, nil, true)
+    end)
+
+    it("sends report over TCP when a TLS port is configured", function()
+      local thread = helpers.tcp_server(8190, {tls=true})
+      constants.REPORTS.STATS_TLS_PORT = 8190
+
+      reports.send("stub", {
+        hello = "world",
+        foo = "bar",
+        baz = function() return "bat" end,
+        foobar = function() return { foo = "bar" } end,
+        bazbat = { baz = "bat" },
+        nilval = function() return nil end,
+      }, "127.0.0.1", 8190)
+
+      local ok, res = thread:join()
+      assert.True(ok)
+      assert.matches("^<14>", res)
+      res = res:sub(5)
+      assert.matches("cores=%d+", res)
+      assert.matches("uname=[%w]+", res)
+      assert.matches("version=" .. meta._VERSION, res, nil, true)
+      assert.matches("hostname=[%w]+", res)
+      assert.matches("foo=bar", res, nil, true)
+      assert.matches("hello=world", res, nil, true)
+      assert.matches("signal=stub", res, nil, true)
+      assert.matches("baz=bat", res, nil, true)
+      assert.not_matches("nilval", res, nil, true)
+      assert.matches("foobar=" .. cjson.encode({ foo = "bar" }), res, nil, true)
+      assert.matches("bazbat=" .. cjson.encode({ baz = "bat" }), res, nil, true)
+      constants.REPORTS.STATS_TLS_PORT = nil
     end)
 
     it("doesn't send if not enabled", function()

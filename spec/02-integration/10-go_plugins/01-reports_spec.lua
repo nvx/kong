@@ -88,7 +88,8 @@ for _, strategy in helpers.each_strategy() do
     end)
 
     before_each(function()
-      reports_server = helpers.mock_reports_server()
+      constants.REPORTS.STATS_TLS_PORT = nil
+      reports_server = helpers.mock_reports_server({port=NEW_STATS_PORT})
     end)
 
     after_each(function()
